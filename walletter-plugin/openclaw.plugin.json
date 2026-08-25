@@ -1,0 +1,57 @@
+{
+  "id": "walletter",
+  "name": "Walletter",
+  "description": "Operate the Walletter API (wallets, transactions, exchanges, rates, recurring, stats, reports).",
+  "version": "0.1.0",
+  "configSchema": {
+    "type": "object",
+    "properties": {
+      "baseUrl": {
+        "type": "string",
+        "description": "Walletter API base URL, as given (no /api added)."
+      },
+      "apiKey": {
+        "type": "string",
+        "description": "Walletter API token (X-Api-Key / Authorization: Bearer, created via POST /api/auth/tokens)."
+      }
+    }
+  },
+  "activation": {
+    "onStartup": true
+  },
+  "contracts": {
+    "tools": [
+      "walletter_health",
+      "walletter_lookup",
+      "walletter_cache_refresh",
+      "walletter_balance",
+      "walletter_wallets",
+      "walletter_wallet_get",
+      "walletter_categories",
+      "walletter_category_create",
+      "walletter_category_update",
+      "walletter_category_delete",
+      "walletter_transactions",
+      "walletter_transaction_get",
+      "walletter_transaction_create",
+      "walletter_transaction_update",
+      "walletter_transaction_delete",
+      "walletter_transaction_add_fee",
+      "walletter_transaction_associate",
+      "walletter_exchanges",
+      "walletter_exchange_get",
+      "walletter_exchange_create",
+      "walletter_exchange_update",
+      "walletter_exchange_delete",
+      "walletter_rates",
+      "walletter_recurring",
+      "walletter_recurring_get",
+      "walletter_recurring_create",
+      "walletter_recurring_execute",
+      "walletter_recurring_update",
+      "walletter_recurring_delete",
+      "walletter_stats",
+      "walletter_reports"
+    ]
+  }
+}
