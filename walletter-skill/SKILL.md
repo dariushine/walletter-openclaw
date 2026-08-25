@@ -18,7 +18,7 @@ Freddy pide cualquier operación sobre sus finanzas a través de Walletter (el r
 | `walletter_health` | Verifica que la API responde (`ok`, `status`). |
 | `walletter_lookup` | **Resuelve billeteras, categorías y el timezone del usuario juntos** (ids y nombres), cacheado. Devuelve `wallets` + `categories` + `timezone` (IANA, ej. `America/Caracas`) + `cachedAt`/`cachedAtIso`. Usar `refresh:true` para forzar recarga. |
 | `walletter_cache_refresh` | Fuerza recarga del cache de wallets/categorías. |
-| `walletter_balance` | Balance consolidado por moneda (lee/rellena cache). |
+| `walletter_balance` | Balance consolidado por moneda **+ lista simplificada de billeteras** (`{ name, balance }`). Lee/rellena el cache. **Omite** las billeteras marcadas `hideInDashboard` o `excludeFromTotal`. |
 | `walletter_wallets` / `walletter_wallet_get` | Lista / detalle de billeteras. **_No hay create/update/delete de billeteras_**: son de solo lectura. Para crear una billetera nueva NO existe tool; si hace falta, se le pregunta al usuario.** |
 | `walletter_categories` | Lista categorías. |
 | `walletter_category_create` | Crea categoría (name, type income/expense, color?). |
@@ -103,6 +103,7 @@ Ver arriba en "Cómo hacer una TRANSACCIÓN" y "Cómo hacer un EXCHANGE".
 - **Siempre usar las tools del plugin, nunca curl.**
 - Montos en **unidades enteras** (el backend los convierte a centavos ×100); fechas/horas con formato estricto.
 - `tz` opcional pero recomendado (`America/Caracas`).
+- `walletter_balance` devuelve `{ currencies, wallets }`: `currencies` agrupa el total por moneda y `wallets` es la lista resumida de billeteras **con su saldo individual** (`name` + `balance`). **No incluye** billeteras con `hideInDashboard` o `excludeFromTotal` (no cuentan en el total). Si quieres el detalle completo de una billetera (alias, tipo, etc.) usa `walletter_wallets`/`walletter_wallet_get`.
 - Si una tool de escritura da `401 API token inválido`, verifica con una de **lectura** (`walletter_lookup`, `walletter_stats`) en la misma sesión: si también da 401, es token/config, no permiso.
 - El cache del plugin vive ~60s en memoria; `walletter_lookup refresh:true` lo fuerza.
 - `walletter_wallets` y `walletter_categories` **sí existen** en este plugin (a diferencia de finance-system): devuelven los campos completos. Para resolver ids usa igual `walletter_lookup`.
