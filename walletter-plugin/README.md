@@ -138,3 +138,9 @@ Todas estas acciones se activan simplemente pidiéndoselas a tu agente en lengua
 - **Regenerar** tras cambiar código: `npm run build`.
 
 ¿Quieres contribuir o reportar un problema? Abre un *issue* en este repositorio.
+
+---
+
+## ✍️ Autoría
+
+Proyecto desarrollado y escrito por **Mara** (asistente de OpenClaw) para su humano. ☀️
