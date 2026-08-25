@@ -1,64 +1,140 @@
-# OpenClaw Plugin — Walletter
+# 🧾 Walletter – Plugin para OpenClaw
 
-Plugin de OpenClaw para operar la API **Walletter** (el rework en .NET/EF Core del sistema financiero):
-billeteras, transacciones, exchanges, tasas, pagos recurrentes, stats y reportes.
+El plugin que le permite a tu **agente de OpenClaw** manejar tus finanzas personales a través del sistema **Walletter**:
 
-Es el equivalente a `finance-system`, pero apuntando a Walletter (backend ASP.NET Core + EF Core,
-Clean Architecture, montos en centavos ×100, tasas ×10000).
+- 💰 ver y gestionar tus **billeteras**
+- 🧾 registrar, editar y borrar **transacciones** (ingresos y gastos)
+- 🔁 hacer **exchanges** entre monedas (con sus comisiones)
+- 📈 consultar la **tasa del día** (BCV y paralelo)
+- ⏰ programar **pagos recurrentes**
+- 📊 ver **estadísticas** y **reportes** de tu dinero
 
-## Tools expuestas (34)
+En cristiano: en vez de decirle a tu agente "hazme el favor de anotar este gasto" y que tenga que usar comandos raros, este plugin le da las herramientas ya preparadas para que las use directo. Tú solo le hablas normal y él/ella hace el trabajo.
 
-| Tool | Función |
-|---|---|
-| `walletter_health` | Verifica que la API responde. |
-| `walletter_lookup` | Resuelve **billeteras, categorías y timezone** juntos, cacheado. |
-| `walletter_cache_refresh` | Fuerza recarga del cache de wallets/categorías. |
-| `walletter_balance` | Balance consolidado por moneda. |
-| `walletter_wallets` / `walletter_wallet_get` | Lista / detalle de billeteras. |
-| `walletter_wallet_create/update/delete/reactivate` | CRUD de billeteras. |
-| `walletter_categories` / `walletter_category_create/update/delete` | CRUD de categorías. |
-| `walletter_transactions` / `walletter_transaction_get` | Lista / detalle de transacciones. |
-| `walletter_transaction_create/update/delete` | CRUD de transacciones. |
-| `walletter_transaction_add_fee` | Añade comisión (`POST /transactions/:id/fee`). |
-| `walletter_transaction_associate` | Crea transacción asociada (`POST /transactions/:id/associate`). |
-| `walletter_exchanges` / `walletter_exchange_get` | Lista / detalle de exchanges. |
-| `walletter_exchange_create/update/delete` | CRUD de exchanges. |
-| `walletter_rates` | Tasa efectiva del día (BCV + paralelo) o de una fecha. |
-| `walletter_recurring(/_get/create/execute/update/delete)` | Pagos recurrentes. |
-| `walletter_stats` | Estadísticas (overview o by-category). |
-| `walletter_reports` | Reporte financiero (period, rate, tz). |
+> ⚙️ Técnicamente, es el puente entre OpenClaw y la API del sistema Walletter. Si quieres saber cómo levantar el sistema Walletter desde cero, mira el README de [dariushine/walletter](https://github.com/dariushine/walletter).
 
-## Configuración
+---
 
-En `openclaw.json` → `plugins.entries.walletter`:
+## Antes de empezar (requisitos)
+
+Para que el plugin funcione necesitas que el sistema **Walletter** ya esté corriendo y accesible por internet o por tu red. Si todavía no lo tienes, primero sigue el **"Cómo correrlo desde cero"** del README del sistema.
+
+---
+
+## 🚀 Cómo instalarlo
+
+> 💡 El comando de instalación lo hace el operador de OpenClaw (o tu agente si tiene permisos de terminal). Si tú solo usas a tu agente por el chat, el plugin probablemente ya esté instalado: solo asegúrate de que esté **activado** (paso 3).
+
+### 1. Clona el repositorio
+
+```bash
+git clone https://github.com/dariushine/walletter-openclaw.git
+cd walletter-openclaw
+```
+
+### 2. Compila el plugin
+
+```bash
+cd walletter-plugin
+npm run setup   # instala las dependencias
+npm run build   # genera el plugin listo para usar
+cd ..
+```
+
+### 3. Instálalo en OpenClaw
+
+Desde la carpeta del repositorio:
+
+```bash
+openclaw plugins install ./walletter-plugin
+```
+
+Si ya lo tenías instalado antes y quieres actualizarlo con los cambios:
+
+```bash
+openclaw plugins install ./walletter-plugin --force
+```
+
+> 📌 **Importante:** después de instalar, **reinicia OpenClaw** (o el servicio del gateway) para que tome la configuración nueva. Verifica que aparezca activado con `openclaw plugins list`.
+
+---
+
+## ⚙️ Cómo configurarlo
+
+Una vez instalado, hay que decirle al plugin **dónde está la API** de Walletter y **con qué llave** conectarse. Esto se hace en el archivo de configuración de OpenClaw (`openclaw.json`), en la sección `plugins.entries.walletter`:
 
 ```json
 "walletter": {
   "enabled": true,
   "config": {
-    "baseUrl": "https://<host>:<puerto>/api",
-    "apiKey": "<walletter api token>"
+    "baseUrl": "https://tu-dominio.com/api",
+    "apiKey": "tu-api-token-de-walletter"
   }
 }
 ```
 
-- `baseUrl`: base de la API **con** `/api`. En producción usa la URL del **frontend** (mismo dominio y puerto), no el backend directo: el frontend (nginx) hace de reverse proxy reenviando `/api` → backend. Ej. si el front sirve en `:3000`: `http://localhost:3000/api` (o `https://tu-dominio/api` si tienes TLS).
-- `apiKey`: API token de Walletter (se crea con `POST /api/auth/tokens` → devuelve `{ id, token }`).
-  Se envía como header `X-Api-Key` (el backend también acepta `Authorization: Bearer`).
+### Qué va en cada campo
 
-## Build
+| Campo | Qué es | Cómo lo consigo |
+|-------|--------|-----------------|
+| `baseUrl` | La dirección de la API de Walletter, **terminando en `/api`**. | Es la misma URL donde abres el frontend de Walletter, pero agregándole `/api`. Ejemplo: si abres Walletter en `https://tu-dominio.com`, usa `https://tu-dominio.com/api`. |
+| `apiKey` | La llave secreta que identifica al plugin. | Se crea dentro de Walletter (más abajo te explico). |
 
-```bash
-npm run setup   # npm install --include=dev
-npm run build   # esbuild → dist/index.js + d.ts
-```
+> 🔒 **Nunca compartas tu `apiKey`** ni la pongas en chats ni en capturas. Es como una contraseña.
 
-El plugin es **autocontenido** (`typebox` embebido con esbuild), porque OpenClaw no instala
-`dependencies` al instalar desde un path local → evita `Cannot find module 'typebox'`.
+### Cómo generar un API token en Walletter
 
-## Notas de la API
+La forma más fácil es pedírselo a tu agente de OpenClaw cuando el sistema ya esté corriendo:
 
-- Los montos van en **unidades** (el plugin los manda así); el backend los convierte a centavos (×100).
-- Fechas: `date` `YYYY-MM-DD`, `time` `HH:MM`, `tz` IANA opcional (default `America/Caracas`).
-- Auth: si la API está sin auth (sin `AUTH_USERNAME`/`AUTH_PASSWORD`), igual se envía el token; el
-  backend la acepta. Si hay auth, se requiere un API token válido.
+> _"Créame un API token para el plugin de Walletter."_
+
+Él/ella lo crea con `POST /api/auth/tokens` y te devuelve un valor como `{ id, token }`. Ese `token` es tu `apiKey`. (Requiere que tengas sesión iniciada en Walletter.)
+
+---
+
+## ✅ Cómo saber que funciona
+
+En el chat con tu agente, escribe algo como:
+
+> _"¿Cómo está mi balance?"_
+
+Si responde con tus billeteras y montos, el plugin está instalado y conectado correctamente. 🎉
+
+Si te da error, revisa:
+- Que la API de Walletter esté corriendo y accesible en el `baseUrl` configurado.
+- Que `apiKey` sea válida (el agente verá un error tipo `401 API token inválido`).
+- Que hayas reiniciado OpenClaw después de instalar.
+
+---
+
+## 🧰 Qué puede hacer el plugin (resumen para humanos)
+
+- **Balance** → cuánto tienes en total, por moneda.
+- **Billeteras** → crear, renombrar, desactivar.
+- **Transacciones** → anotar ingresos/gastos, editarlos, borrarlos, agregar comisiones.
+- **Exchanges** → cambiar de un dinero a otro (ej. VES → USD) con su comisión.
+- **Tasas** → la tasa del día (BCV y paralelo).
+- **Pagos recurrentes** → programar pagos que se repiten y ejecutarlos.
+- **Stats y reportes** → ver cómo va tu dinero por categoría y por período.
+
+Todas estas acciones se activan simplemente pidiéndoselas a tu agente en lenguaje natural.
+
+---
+
+## 🐛 Problemas comunes
+
+| Síntoma | Causa probable | Solución |
+|---------|----------------|----------|
+| `401 API token inválido` | El `apiKey` no sirve o caducó | Genera un token nuevo y actualiza la config |
+| "No encontrado" de tool Walletter | Plugin no activado o OpenClaw sin reiniciar | Actívalo y reinicia OpenClaw |
+| No conecta a la API | Red/URL mal configurada o sistema apagado | Verifica `baseUrl` y que Walletter esté corriendo |
+
+---
+
+## 👩‍💻 Para desarrolladores
+
+- **Stack:** TypeScript, compilado con esbuild (plugin autocontenido, embebe sus dependencias).
+- **Pruebas:** `npm test` (Vitest).
+- **Regenerar** tras cambiar código: `npm run build`.
+
+¿Quieres contribuir o reportar un problema? Abre un *issue* en este repositorio.
