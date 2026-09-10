@@ -127,7 +127,7 @@ async function getTimeZone(config: Config): Promise<string | null> {
 export default defineToolPlugin({
   id: "walletter",
   name: "Walletter",
-  description: "Operate the Walletter API (wallets, transactions, exchanges, rates, recurring, stats, reports).",
+  description: "Operate the Walletter API (wallets, transactions, exchanges, rates, recurring, pending payments, stats, reports).",
   configSchema: Type.Object({
     baseUrl: Type.Optional(Type.String({ description: "Walletter API base URL, as given (no /api added)." })),
     apiKey: Type.Optional(Type.String({ description: "Walletter API token (X-Api-Key / Authorization: Bearer)." })),
@@ -772,6 +772,164 @@ export default defineToolPlugin({
       parameters: Type.Object({ id: Type.Number({ description: "Recurring payment id." }) }),
       execute: async (p, config) => {
         const res = await api<unknown>(config, `/recurring-payments/${p.id}`, { method: "DELETE" });
+        return res;
+      },
+    }),
+
+    // ---------------- Pending payments ----------------
+    tool({
+      name: "walletter_pending",
+      label: "Walletter Pending Payments",
+      description:
+        "List pending payments (active, not cancelled and not paid by default). " +
+        "Pass includePaid=true to also include paid ones (history).",
+      parameters: Type.Object({
+        includePaid: Type.Optional(Type.Boolean({ description: "Also include paid payments (history)." })),
+      }),
+      execute: async (p, config) => {
+        const q = p.includePaid ? "?includePaid=true" : "";
+        return api<unknown[]>(config, `/pending-payments${q}`);
+      },
+    }),
+    tool({
+      name: "walletter_pending_get",
+      label: "Walletter Pending Payment Detail",
+      description: "Get a single pending payment by id.",
+      parameters: Type.Object({ id: Type.Number({ description: "Pending payment id." }) }),
+      execute: async (p, config) => api<unknown>(config, `/pending-payments/${p.id}`),
+    }),
+    tool({
+      name: "walletter_pending_create",
+      label: "Create Pending Payment",
+      description:
+        "Create a pending payment (debt/obligation not yet paid). name, amount, currency and type required. " +
+        "Optional categoryName, walletId, fee, description, dueDate (YYYY-MM-DD).",
+      parameters: Type.Object({
+        name: Type.String({ description: "Pending payment name." }),
+        description: Type.Optional(Type.String({ description: "Optional description." })),
+        amount: Type.Number({ description: "Amount in units." }),
+        fee: Type.Optional(Type.Number({ description: "Optional fee in units." })),
+        currency: Type.String({ description: "Currency code, e.g. USD, VES." }),
+        type: Type.String({ description: "income or expense." }),
+        categoryName: Type.Optional(Type.String({ description: "Category name." })),
+        walletId: Type.Optional(Type.Number({ description: "Wallet id." })),
+        dueDate: Type.Optional(Type.String({ description: "Due date YYYY-MM-DD (optional)." })),
+      }),
+      execute: async (p, config) => {
+        const res = await api<unknown>(config, "/pending-payments", {
+          method: "POST",
+          body: JSON.stringify({
+            name: p.name,
+            description: p.description,
+            amount: p.amount,
+            fee: p.fee ?? 0,
+            currency: p.currency,
+            type: p.type,
+            categoryName: p.categoryName,
+            walletId: p.walletId,
+            dueDate: p.dueDate,
+          }),
+        });
+        return res;
+      },
+    }),
+    tool({
+      name: "walletter_pending_pay",
+      label: "Pay Pending Payment",
+      description:
+        "Pay a pending payment, generating a real transaction. date YYYY-MM-DD, time HH:MM, tz optional. " +
+        "Optional overrideAmount, overrideFee, overrideCategoryName, overrideWalletId, description. " +
+        "A paid pending payment can no longer be edited or deleted.",
+      parameters: Type.Object({
+        id: Type.Number({ description: "Pending payment id." }),
+        date: Type.String({ description: "YYYY-MM-DD." }),
+        time: Type.String({ description: "HH:MM." }),
+        tz: Type.Optional(Type.String({ description: "IANA timezone." })),
+        walletId: Type.Optional(Type.Number({ description: "Target wallet id." })),
+        overrideAmount: Type.Optional(Type.Number({ description: "Override amount in units." })),
+        overrideFee: Type.Optional(Type.Number({ description: "Override fee in units." })),
+        overrideCategoryName: Type.Optional(Type.String({ description: "Override category name." })),
+        overrideWalletId: Type.Optional(Type.Number({ description: "Override wallet id." })),
+        description: Type.Optional(Type.String({ description: "Optional description." })),
+      }),
+      execute: async (p, config) => {
+        const res = await api<unknown>(config, `/pending-payments/${p.id}/pay`, {
+          method: "POST",
+          body: JSON.stringify({
+            date: p.date,
+            time: p.time,
+            tz: p.tz,
+            walletId: p.walletId,
+            overrideAmount: p.overrideAmount,
+            overrideFee: p.overrideFee,
+            overrideCategoryName: p.overrideCategoryName,
+            overrideWalletId: p.overrideWalletId,
+            description: p.description,
+          }),
+        });
+        invalidateWalletCache();
+        return res;
+      },
+    }),
+    tool({
+      name: "walletter_pending_mark_paid",
+      label: "Mark Pending Payment Paid",
+      description:
+        "Mark a pending payment as paid WITHOUT creating a transaction " +
+        "(POST /pending-payments/:id/mark-paid). Use when the real transaction was already created " +
+        "by another means (e.g. a manual wallet transaction) and you only need to update the pending status. " +
+        "Optional transactionId to link the real transaction for traceability.",
+      parameters: Type.Object({
+        id: Type.Number({ description: "Pending payment id." }),
+        transactionId: Type.Optional(Type.Number({ description: "Optional id of the real transaction that paid it." })),
+      }),
+      execute: async (p, config) => {
+        const res = await api<unknown>(config, `/pending-payments/${p.id}/mark-paid`, {
+          method: "POST",
+          body: JSON.stringify({ transactionId: p.transactionId }),
+        });
+        return res;
+      },
+    }),
+    tool({
+      name: "walletter_pending_update",
+      label: "Update Pending Payment",
+      description:
+        "Edit a pending payment by id. All fields optional. Cannot edit a pending payment that is already paid.",
+      parameters: Type.Object({
+        id: Type.Number({ description: "Pending payment id." }),
+        name: Type.Optional(Type.String({ description: "New name." })),
+        description: Type.Optional(Type.String({ description: "New description." })),
+        amount: Type.Optional(Type.Number({ description: "New amount in units." })),
+        fee: Type.Optional(Type.Number({ description: "New fee in units." })),
+        currency: Type.Optional(Type.String({ description: "New currency." })),
+        type: Type.Optional(Type.String({ description: "income or expense." })),
+        categoryName: Type.Optional(Type.String({ description: "New category name." })),
+        walletId: Type.Optional(Type.Number({ description: "New wallet id." })),
+        dueDate: Type.Optional(Type.String({ description: "New due date YYYY-MM-DD. Pass empty string to clear." })),
+      }),
+      execute: async (p, config) => {
+        const body: Record<string, unknown> = {};
+        if (p.name !== undefined) body.name = p.name;
+        if (p.description !== undefined) body.description = p.description;
+        if (p.amount !== undefined) body.amount = p.amount;
+        if (p.fee !== undefined) body.fee = p.fee;
+        if (p.currency !== undefined) body.currency = p.currency;
+        if (p.type !== undefined) body.type = p.type;
+        if (p.categoryName !== undefined) body.categoryName = p.categoryName;
+        if (p.walletId !== undefined) body.walletId = p.walletId;
+        if (p.dueDate !== undefined) body.dueDate = p.dueDate;
+        const res = await api<unknown>(config, `/pending-payments/${p.id}`, { method: "PUT", body: JSON.stringify(body) });
+        return res;
+      },
+    }),
+    tool({
+      name: "walletter_pending_delete",
+      label: "Delete Pending Payment",
+      description: "Delete (cancel) a pending payment by id. Cannot delete a pending payment that is already paid.",
+      parameters: Type.Object({ id: Type.Number({ description: "Pending payment id." }) }),
+      execute: async (p, config) => {
+        const res = await api<unknown>(config, `/pending-payments/${p.id}`, { method: "DELETE" });
         return res;
       },
     }),

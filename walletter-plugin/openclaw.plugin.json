@@ -1,7 +1,7 @@
 {
   "id": "walletter",
   "name": "Walletter",
-  "description": "Operate the Walletter API (wallets, transactions, exchanges, rates, recurring, stats, reports).",
+  "description": "Operate the Walletter API (wallets, transactions, exchanges, rates, recurring, pending payments, stats, reports).",
   "version": "0.1.0",
   "configSchema": {
     "type": "object",
@@ -50,6 +50,13 @@
       "walletter_recurring_execute",
       "walletter_recurring_update",
       "walletter_recurring_delete",
+      "walletter_pending",
+      "walletter_pending_get",
+      "walletter_pending_create",
+      "walletter_pending_pay",
+      "walletter_pending_mark_paid",
+      "walletter_pending_update",
+      "walletter_pending_delete",
       "walletter_stats",
       "walletter_reports"
     ]

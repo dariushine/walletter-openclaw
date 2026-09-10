@@ -1,6 +1,6 @@
 ---
 name: "walletter"
-description: "Operar el plugin walletter (wallets, transacciones, exchanges, tasas, recurrentes, stats, reportes) usando sus tools walletter_*."
+description: "Operar el plugin walletter (wallets, transacciones, exchanges, tasas, recurrentes, pagos pendientes, stats, reportes) usando sus tools walletter_*."
 ---
 
 # Skill: Walletter
@@ -9,9 +9,9 @@ Operar las finanzas de Freddy a través del plugin `walletter` usando sus tools 
 
 ## Cuándo usar
 
-Freddy pide cualquier operación sobre sus finanzas a través de Walletter (el rework .NET): ver billeteras/categorías/balance, registrar o editar transacciones, hacer exchanges (con su fee), ver tasas, pagos recurrentes, stats o reportes. Si menciona "usa el plugin" o "usa walletter", cargar esta skill y seguir su método.
+Freddy pide cualquier operación sobre sus finanzas a través de Walletter (el rework .NET): ver billeteras/categorías/balance, registrar o editar transacciones, hacer exchanges (con su fee), ver tasas, pagos recurrentes, **pagos pendientes**, stats o reportes. Si menciona "usa el plugin" o "usa walletter", cargar esta skill y seguir su método.
 
-## Tools del plugin (31)
+## Tools del plugin (39)
 
 | Tool | Función |
 |---|---|
@@ -37,6 +37,12 @@ Freddy pide cualquier operación sobre sus finanzas a través de Walletter (el r
 | `walletter_recurring_create` | Crea pago recurrente (name, amount, currency, type, categoryName?/categoryId?, walletId?, fee?). |
 | `walletter_recurring_execute` | Ejecuta un pago recurrente generando una transacción real (date, time; overrides opcionales). |
 | `walletter_recurring_update` / `walletter_recurring_delete` | Edita / borra pago recurrente. |
+| `walletter_pending` | Lista **pagos pendientes** activos (no pagados ni cancelados). `includePaid:true` incluye el historial de pagados. |
+| `walletter_pending_get` | Detalle de un pago pendiente por id. |
+| `walletter_pending_create` | Crea pago pendiente (name, amount, currency, type, categoryName?, walletId?, fee?, dueDate? `YYYY-MM-DD`). |
+| `walletter_pending_pay` | **Paga** un pendiente generando una transacción real (date, time; overrides opcionales). Igual que `recurring_execute`. |
+| `walletter_pending_mark_paid` | Marca un pendiente como pagado **sin crear transacción** (cuando la transacción real ya se creó por otra vía). `transactionId?` opcional. |
+| `walletter_pending_update` / `walletter_pending_delete` | Edita / cancela un pendiente. **No se puede** editar/cancelar uno ya pagado. |
 | `walletter_stats` | Estadísticas (overview o `byCategory:true` para por-categoría). |
 | `walletter_reports` | Reporte financiero (period?, rate?, tz?). |
 
@@ -90,6 +96,13 @@ Ver arriba en "Cómo hacer una TRANSACCIÓN" y "Cómo hacer un EXCHANGE".
 ### Pagos recurrentes
 1. `walletter_recurring` → lista los recurrentes existentes (para conocer `id`).
 2. `walletter_recurring_create` para crear; `walletter_recurring_execute` con `{id, date, time}` para disparar una transacción real (con overrides opcionales `overrideAmount`, `overrideCategoryName`, etc.).
+
+### Pagos pendientes
+1. `walletter_pending` → lista los pendientes activos (para conocer `id` y estado). `includePaid:true` para ver historial de pagados.
+2. `walletter_pending_create` para registrar una deuda/pendiente (name, amount, currency, type, categoryName, walletId?, fee?, dueDate?).
+3. `walletter_pending_pay` con `{id, date, time, tz}` para **pagarlo**: genera una transacción real (monto + comisión) y marca el pendiente como pagado. Usa overrides (`overrideAmount`, `overrideWalletId`, etc.) si el pago difiere del registro.
+4. **Editar/cancelar**: `walletter_pending_update` / `walletter_pending_delete`. Un pendiente **ya pagado NO se puede editar ni cancelar** (su transacción real quedó fijada).
+5. `walletter_pending_mark_paid` SOLO para el caso en que la transacción real ya se creó por otra vía (p. ej. se registró a mano) y solo falta actualizar el estado del pendiente.
 
 ### Consultar (walletter)
 - Balance: `walletter_balance`.
