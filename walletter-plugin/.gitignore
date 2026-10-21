@@ -1,3 +1,8 @@
 node_modules/
 dist/
 *.tsbuildinfo
+
+# Tipos vendorizados (parche específico del host con el symlink node_modules/openclaw -> /app
+# sin .d.ts). NO se versionan: el repo tiene su propio node_modules/openclaw con declaraciones.
+types/
+vendor-types/
