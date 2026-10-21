@@ -635,6 +635,76 @@ export default defineToolPlugin({
       },
     }),
 
+    // ---------------- Imports (CSV batch) ----------------
+    tool({
+      name: "walletter_import_transactions",
+      label: "Walletter Import Transactions",
+      description:
+        "Batch-import transactions from CSV text (POST /import/transactions). " +
+        "Columns: fecha,hora,tipo,billetera,categoria,monto,fee,descripcion " +
+        "(English aliases accepted: date,time,type,wallet,category,amount,description). " +
+        "Billetera accepts name, alias or id; categoria is created if missing; tipo is income|expense. " +
+        "A failed row does not abort the rest: the response returns per-row detail " +
+        "(rows[] with row number, ok, error and data), plus total/imported/failed. " +
+        "SAFETY: dryRun defaults to true, so it only validates and returns a preview without writing anything. " +
+        "A real import happens only when you explicitly pass dryRun:false.",
+      parameters: Type.Object({
+        csv: Type.String({
+          description: "CSV content as text, with a header row: fecha,hora,tipo,billetera,categoria,monto,fee,descripcion.",
+        }),
+        tz: Type.Optional(Type.String({ description: "IANA timezone, e.g. America/Caracas (default America/Caracas)." })),
+        dryRun: Type.Optional(
+          Type.Boolean({ description: "Validate and preview only, without writing. Default true; pass false to import for real." }),
+        ),
+      }),
+      execute: async (p, config) => {
+        const res = await api<unknown>(config, "/import/transactions", {
+          method: "POST",
+          body: JSON.stringify({
+            csv: p.csv,
+            tz: p.tz ?? "America/Caracas",
+            dryRun: p.dryRun ?? true,
+          }),
+        });
+        if ((p.dryRun ?? true) === false) invalidateWalletCache();
+        return res;
+      },
+    }),
+    tool({
+      name: "walletter_import_exchanges",
+      label: "Walletter Import Exchanges",
+      description:
+        "Batch-import currency exchanges from CSV text (POST /import/exchanges). " +
+        "Columns: fecha,hora,origen,destino,monto enviado,monto recibido,fee,creditfee,descripcion " +
+        "(English aliases accepted: date,time,from,to,fromAmount,toAmount,fee,creditFee,description). " +
+        "Origen/destino accept name, alias or id and must differ; amounts are in units. " +
+        "A failed row does not abort the rest: the response returns per-row detail " +
+        "(rows[] with row number, ok, error and data), plus total/imported/failed. " +
+        "SAFETY: dryRun defaults to true, so it only validates and returns a preview without writing anything. " +
+        "A real import happens only when you explicitly pass dryRun:false.",
+      parameters: Type.Object({
+        csv: Type.String({
+          description: "CSV content as text, with a header row: fecha,hora,origen,destino,monto enviado,monto recibido,fee,creditfee,descripcion.",
+        }),
+        tz: Type.Optional(Type.String({ description: "IANA timezone, e.g. America/Caracas (default America/Caracas)." })),
+        dryRun: Type.Optional(
+          Type.Boolean({ description: "Validate and preview only, without writing. Default true; pass false to import for real." }),
+        ),
+      }),
+      execute: async (p, config) => {
+        const res = await api<unknown>(config, "/import/exchanges", {
+          method: "POST",
+          body: JSON.stringify({
+            csv: p.csv,
+            tz: p.tz ?? "America/Caracas",
+            dryRun: p.dryRun ?? true,
+          }),
+        });
+        if ((p.dryRun ?? true) === false) invalidateWalletCache();
+        return res;
+      },
+    }),
+
     // ---------------- Rates ----------------
     tool({
       name: "walletter_rates",

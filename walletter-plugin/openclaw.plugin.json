@@ -58,7 +58,9 @@
       "walletter_pending_update",
       "walletter_pending_delete",
       "walletter_stats",
-      "walletter_reports"
+      "walletter_reports",
+      "walletter_import_transactions",
+      "walletter_import_exchanges"
     ]
   }
 }
